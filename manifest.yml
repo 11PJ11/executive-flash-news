@@ -16,6 +16,7 @@ resources:
 app:
   runtime:
     name: nodejs18.x
+  id: ari:cloud:ecosystem::app/7b09cf25-a6b5-4399-94ee-8412095ed557
 permissions:
   scopes:
     - read:jira-user

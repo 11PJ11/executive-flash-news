@@ -7,15 +7,6 @@ on:
     types: [ published ]
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        default: 'development'
-        type: choice
-        options:
-        - development
-        - staging
-        - production
       skip_tests:
         description: 'Skip test execution'
         required: false
@@ -258,168 +249,15 @@ jobs:
           echo "- ✅ Manifest validation passed" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Forge build completed successfully" >> $GITHUB_STEP_SUMMARY
 
-  # ===== DEVELOPMENT DEPLOYMENT =====
-  deploy-development:
-    name: 🚀 Deploy to Development
+  # ===== PRODUCTION DEPLOYMENT =====
+  deploy-production:
+    name: 🚀 Deploy to Production
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [build-and-test, atdd-validation, security-scan, forge-build]
     if: |
       (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') &&
       needs.build-and-test.outputs.test-results == 'success'
-    environment:
-      name: development
-      url: ${{ steps.deployment.outputs.url }}
-
-    steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: 📦 Install Dependencies
-        run: npm ci
-
-      - name: 🔧 Install Forge CLI
-        run: npm install -g @forge/cli@latest
-
-      - name: 🔑 Forge Authentication
-        run: |
-          echo "${{ secrets.FORGE_API_TOKEN }}" | forge login --no-prompt
-        env:
-          FORGE_EMAIL: ${{ secrets.FORGE_EMAIL }}
-
-      - name: 🚀 Deploy to Development
-        id: deployment
-        run: |
-          echo "🚀 Deploying to development environment..."
-
-          # Set environment variables
-          export FORGE_DEV_APP_ID="${{ secrets.FORGE_DEV_APP_ID }}"
-          export DEV_JIRA_SITE_URL="${{ secrets.DEV_JIRA_SITE_URL }}"
-
-          # Deploy to development
-          forge deploy --environment development --no-prompt
-
-          # Install if needed
-          if [ -n "${{ secrets.FORGE_DEV_SITE }}" ]; then
-            forge install --site "${{ secrets.FORGE_DEV_SITE }}" --product jira --no-prompt || echo "App already installed"
-          fi
-
-          echo "url=${{ secrets.DEV_JIRA_SITE_URL }}" >> $GITHUB_OUTPUT
-
-      - name: ⏳ Wait for Deployment
-        run: |
-          echo "⏳ Waiting for deployment to stabilize..."
-          sleep 30
-
-      - name: 🔍 Health Check
-        run: |
-          echo "🔍 Performing health check..."
-          # Add health check logic here
-          echo "✅ Development deployment health check passed"
-
-  # ===== INTEGRATION TESTS ON DEPLOYED APP =====
-  integration-tests:
-    name: 🧪 Integration Tests (Deployed)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: [deploy-development]
-    if: ${{ needs.deploy-development.result == 'success' }}
-
-    steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: 📦 Install Dependencies
-        run: npm ci
-
-      - name: 🧪 Run E2E Tests
-        run: |
-          echo "🧪 Running E2E tests against deployed application..."
-          npm run test:e2e
-        env:
-          TEST_ENVIRONMENT: development
-          JIRA_SITE_URL: ${{ secrets.DEV_JIRA_SITE_URL }}
-          APP_ID: ${{ secrets.FORGE_DEV_APP_ID }}
-
-      - name: 📊 Integration Test Report
-        if: always()
-        run: |
-          echo "### Integration Test Results" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ E2E tests completed against deployed application" >> $GITHUB_STEP_SUMMARY
-
-  # ===== STAGING DEPLOYMENT =====
-  deploy-staging:
-    name: 🎭 Deploy to Staging
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    needs: [integration-tests]
-    if: |
-      github.ref == 'refs/heads/main' &&
-      needs.integration-tests.result == 'success'
-    environment:
-      name: staging
-      url: ${{ steps.deployment.outputs.url }}
-
-    steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: 📦 Install Dependencies
-        run: npm ci
-
-      - name: 🔧 Install Forge CLI
-        run: npm install -g @forge/cli@latest
-
-      - name: 🔑 Forge Authentication
-        run: |
-          echo "${{ secrets.FORGE_API_TOKEN }}" | forge login --no-prompt
-        env:
-          FORGE_EMAIL: ${{ secrets.FORGE_EMAIL }}
-
-      - name: 🎭 Deploy to Staging
-        id: deployment
-        run: |
-          echo "🎭 Deploying to staging environment..."
-
-          export FORGE_STAGING_APP_ID="${{ secrets.FORGE_STAGING_APP_ID }}"
-          export STAGING_JIRA_SITE_URL="${{ secrets.STAGING_JIRA_SITE_URL }}"
-
-          forge deploy --environment staging --no-prompt
-
-          if [ -n "${{ secrets.FORGE_STAGING_SITE }}" ]; then
-            forge install --site "${{ secrets.FORGE_STAGING_SITE }}" --product jira --no-prompt || echo "App already installed"
-          fi
-
-          echo "url=${{ secrets.STAGING_JIRA_SITE_URL }}" >> $GITHUB_OUTPUT
-
-  # ===== PRODUCTION DEPLOYMENT =====
-  deploy-production:
-    name: 🚀 Deploy to Production
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [deploy-staging]
-    if: |
-      (github.event_name == 'release' ||
-       (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')) &&
-      needs.deploy-staging.result == 'success'
     environment:
       name: production
       url: ${{ steps.deployment.outputs.url }}
@@ -451,31 +289,75 @@ jobs:
         run: |
           echo "🚀 Deploying to production environment..."
 
+          # Set environment variables
           export FORGE_PROD_APP_ID="${{ secrets.FORGE_PROD_APP_ID }}"
           export PROD_JIRA_SITE_URL="${{ secrets.PROD_JIRA_SITE_URL }}"
 
+          # Deploy to production
           forge deploy --environment production --no-prompt
 
+          # Install if needed
           if [ -n "${{ secrets.FORGE_PROD_SITE }}" ]; then
             forge install --site "${{ secrets.FORGE_PROD_SITE }}" --product jira --no-prompt || echo "App already installed"
           fi
 
           echo "url=${{ secrets.PROD_JIRA_SITE_URL }}" >> $GITHUB_OUTPUT
 
-      - name: ⏳ Production Deployment Verification
+      - name: ⏳ Wait for Deployment
         run: |
-          echo "⏳ Verifying production deployment..."
-          sleep 60 # Allow time for deployment to propagate
+          echo "⏳ Waiting for deployment to stabilize..."
+          sleep 30
 
-          echo "✅ Production deployment completed successfully"
+      - name: 🔍 Health Check
+        run: |
+          echo "🔍 Performing health check..."
+          # Add health check logic here
+          echo "✅ Production deployment health check passed"
+
+  # ===== INTEGRATION TESTS ON DEPLOYED APP =====
+  integration-tests:
+    name: 🧪 Integration Tests (Deployed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [deploy-production]
+    if: ${{ needs.deploy-production.result == 'success' }}
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🧪 Run E2E Tests
+        run: |
+          echo "🧪 Running E2E tests against deployed application..."
+          npm run test:e2e
+        env:
+          TEST_ENVIRONMENT: production
+          JIRA_SITE_URL: ${{ secrets.PROD_JIRA_SITE_URL }}
+          APP_ID: ${{ secrets.FORGE_PROD_APP_ID }}
+
+      - name: 📊 Integration Test Report
+        if: always()
+        run: |
+          echo "### Integration Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ E2E tests completed against deployed application" >> $GITHUB_STEP_SUMMARY
+
 
   # ===== HEALTH CHECK & MONITORING =====
   health-check:
     name: 🏥 Health Check & Monitoring
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [deploy-production]
-    if: ${{ needs.deploy-production.result == 'success' || needs.deploy-development.result == 'success' }}
+    needs: [integration-tests]
+    if: ${{ needs.integration-tests.result == 'success' }}
 
     steps:
       - name: 🏥 Application Health Check
@@ -498,7 +380,7 @@ jobs:
   notify:
     name: 📢 Notification
     runs-on: ubuntu-latest
-    needs: [build-and-test, atdd-validation, security-scan, forge-build, deploy-development, integration-tests, deploy-staging, deploy-production, health-check]
+    needs: [build-and-test, atdd-validation, security-scan, forge-build, deploy-production, integration-tests, health-check]
     if: always()
 
     steps:
@@ -513,10 +395,8 @@ jobs:
             • ATDD Validation: ${{ needs.atdd-validation.result }}
             • Security Scan: ${{ needs.security-scan.result }}
             • Forge Build: ${{ needs.forge-build.result }}
-            • Development Deploy: ${{ needs.deploy-development.result }}
-            • Integration Tests: ${{ needs.integration-tests.result }}
-            • Staging Deploy: ${{ needs.deploy-staging.result }}
             • Production Deploy: ${{ needs.deploy-production.result }}
+            • Integration Tests: ${{ needs.integration-tests.result }}
             • Health Check: ${{ needs.health-check.result }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

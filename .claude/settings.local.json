@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash:*)",
+      "Bash(curl:*)",
+      "Bash(docker-compose:*)",
+      "Bash(chmod:*)",
+      "Bash(./start-jira-dev.sh:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker logs:*)",
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(forge:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

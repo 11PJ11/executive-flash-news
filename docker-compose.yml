@@ -1,0 +1,79 @@
+# docker-compose.yml
+
+services:
+  jira-setup:
+    image: atlassian/jira-software:9.12.0
+    container_name: jira-setup
+    user: root
+    volumes:
+      - jira-data:/var/atlassian/application-data/jira
+    command: >
+      sh -c "
+        mkdir -p /var/atlassian/application-data/jira &&
+        chown -R 2001:2001 /var/atlassian/application-data/jira &&
+        chmod -R 755 /var/atlassian/application-data/jira &&
+        echo 'Jira volume initialized successfully'
+      "
+
+  jira:
+    image: atlassian/jira-software:9.12.0
+    container_name: jira-dev
+    user: "2001:2001"
+    depends_on:
+      database:
+        condition: service_healthy
+      jira-setup:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    environment:
+      - ATL_PROXY_NAME=localhost
+      - ATL_PROXY_PORT=8080
+      - ATL_TOMCAT_PORT=8080
+      - JVM_MINIMUM_MEMORY=2g
+      - JVM_MAXIMUM_MEMORY=6g
+      - JVM_SUPPORT_RECOMMENDED_ARGS=-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseContainerSupport
+      - ATL_JDBC_URL=jdbc:postgresql://database:5432/jira
+      - ATL_JDBC_USER=jira
+      - ATL_JDBC_PASSWORD=jira_secure_password
+      - ATL_DB_TYPE=postgresql
+      - ATL_FORCE_CFG_UPDATE=true
+      - SET_PERMISSIONS=false
+    volumes:
+      - jira-data:/var/atlassian/application-data/jira
+      - ./plugins:/var/atlassian/application-data/jira/plugins/installed-plugins
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    restart: unless-stopped
+
+  database:
+    image: postgres:15
+    container_name: jira-db
+    environment:
+      - POSTGRES_DB=jira
+      - POSTGRES_USER=jira
+      - POSTGRES_PASSWORD=jira_secure_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --locale=C
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jira -d jira"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  jira-data:
+  db-data:
+
+networks:
+  default:
+    name: jira-dev-network

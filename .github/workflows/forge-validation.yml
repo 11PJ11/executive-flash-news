@@ -1,0 +1,58 @@
+name: Forge Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to validate'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+        - development
+        - staging
+        - production
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  validate-deployment:
+    name: Validate Forge Deployment
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Forge CLI
+      run: npm install -g @forge/cli
+
+    - name: Configure Forge authentication
+      run: |
+        echo "${{ secrets.FORGE_API_TOKEN }}" | forge login
+
+    - name: Validate manifest
+      run: forge lint
+
+    - name: Validate deployment
+      run: forge deploy --environment ${{ github.event.inputs.environment }} --dry-run
+
+    - name: Check app status
+      run: forge status --environment ${{ github.event.inputs.environment }}
+
+    - name: Run deployment health check
+      run: |
+        # Custom health check script
+        node scripts/health-check.js --environment ${{ github.event.inputs.environment }}
+      continue-on-error: true

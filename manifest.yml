@@ -1,0 +1,22 @@
+modules:
+  jira:dashboardItem:
+    - key: executive-flash-news-widget
+      name: Executive Flash News
+      description: Executive dashboard widget for flash news and insights
+      icon: https://developer.atlassian.com/platform/forge/images/icons/icon-blue.svg
+      resolver:
+        function: resolver
+      resource: main
+  function:
+    - key: resolver
+      handler: index.handler
+resources:
+  - key: main
+    path: static/hello-world/build
+app:
+  runtime:
+    name: nodejs18.x
+permissions:
+  scopes:
+    - read:jira-user
+    - read:jira-work

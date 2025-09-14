@@ -1,0 +1,51 @@
+# CI/CD Docker Image for Executive Flash News
+# Optimized for fast CI/CD pipeline execution
+
+FROM node:18-alpine AS base
+
+# Install system dependencies
+RUN apk add --no-cache \
+    bash \
+    git \
+    curl \
+    jq \
+    yq \
+    bc \
+    grep \
+    findutils \
+    && rm -rf /var/cache/apk/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Copy source code
+COPY . .
+
+# Create logs directory
+RUN mkdir -p logs
+
+# Make scripts executable
+RUN chmod +x scripts/*.sh || echo "No scripts found"
+
+# Set default command
+CMD ["npm", "test"]
+
+# Multi-stage build for different CI purposes
+FROM base AS test-runner
+RUN npm ci
+CMD ["npm", "run", "test:coverage"]
+
+FROM base AS security-scanner
+RUN npm ci
+CMD ["npm", "run", "security-scan"]
+
+FROM base AS forge-builder
+RUN npm install -g @forge/cli@latest
+CMD ["npm", "run", "build"]

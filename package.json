@@ -1,0 +1,120 @@
+{
+  "name": "executive-flash-news",
+  "version": "1.0.0",
+  "description": "Executive Flash News Jira Plugin - Transform complex Jira data into executive-friendly flash news",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "forge build",
+    "deploy": "forge deploy",
+    "forge:install": "forge install",
+    "tunnel": "forge tunnel",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:e2e": "jest --testNamePattern=\"E2E|e2e\"",
+    "test:unit": "jest --testNamePattern=\"^(?!.*E2E|.*e2e)\"",
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
+    "lint:security": "eslint src --ext .js,.jsx,.ts,.tsx --config .eslintrc.security.js",
+    "type-check": "tsc --noEmit",
+    "prettier:check": "prettier --check src/**/*.{js,jsx,ts,tsx}",
+    "prettier:fix": "prettier --write src/**/*.{js,jsx,ts,tsx}",
+    "quality-gates": "bash scripts/quality-gates.sh",
+    "forge-validate": "bash scripts/forge-validate.sh",
+    "atdd-compliance": "bash scripts/atdd-compliance.sh",
+    "security-scan": "npm audit --audit-level moderate && npm run lint:security",
+    "pre-commit": "npm run quality-gates",
+    "pre-push": "npm run test:coverage && npm run forge-validate",
+    "ci:install": "npm ci",
+    "ci:build": "npm run build",
+    "ci:test": "npm run test:coverage -- --passWithNoTests",
+    "ci:lint": "npm run lint && npm run type-check",
+    "ci:security": "npm run security-scan",
+    "ci:quality": "npm run quality-gates",
+    "ci:forge": "npm run forge-validate",
+    "ci:atdd": "npm run atdd-compliance",
+    "setup-scripts": "bash scripts/make-executable.sh"
+  },
+  "keywords": [
+    "jira",
+    "forge",
+    "executive",
+    "dashboard",
+    "flash-news",
+    "ci-cd",
+    "atdd",
+    "quality"
+  ],
+  "author": "Executive Flash News Team",
+  "license": "MIT",
+  "dependencies": {
+    "@forge/api": "^3.0.0",
+    "@forge/resolver": "^1.5.0",
+    "@forge/ui": "^1.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.23.0",
+    "@babel/plugin-transform-modules-commonjs": "^7.23.0",
+    "@types/jest": "^29.5.5",
+    "@typescript-eslint/eslint-plugin": "^6.7.0",
+    "@typescript-eslint/parser": "^6.7.0",
+    "audit-ci": "^6.6.1",
+    "babel-jest": "^29.7.0",
+    "eslint": "^8.49.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-security": "^1.7.1",
+    "jest": "^29.7.0",
+    "prettier": "^3.0.3",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/executive-flash-news.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/executive-flash-news/issues"
+  },
+  "homepage": "https://github.com/your-org/executive-flash-news#readme",
+  "config": {
+    "forge": {
+      "environments": {
+        "development": {
+          "appId": "${FORGE_DEV_APP_ID}",
+          "site": "${DEV_JIRA_SITE_URL}"
+        },
+        "staging": {
+          "appId": "${FORGE_STAGING_APP_ID}",
+          "site": "${STAGING_JIRA_SITE_URL}"
+        },
+        "production": {
+          "appId": "${FORGE_PROD_APP_ID}",
+          "site": "${PROD_JIRA_SITE_URL}"
+        }
+      }
+    },
+    "ci": {
+      "coverage_threshold": {
+        "global": 50,
+        "domain": 80
+      },
+      "build_timeout": 120,
+      "test_timeout": 60,
+      "security": {
+        "audit_level": "moderate",
+        "fail_on_high": true
+      }
+    }
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run pre-commit",
+      "pre-push": "npm run pre-push"
+    }
+  }
+}

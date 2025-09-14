@@ -2,9 +2,7 @@ name: CI/CD Pipeline - Executive Flash News
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
   release:
     types: [ published ]
   workflow_dispatch:
@@ -267,7 +265,7 @@ jobs:
     timeout-minutes: 20
     needs: [build-and-test, atdd-validation, security-scan, forge-build]
     if: |
-      (github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch') &&
+      (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') &&
       needs.build-and-test.outputs.test-results == 'success'
     environment:
       name: development

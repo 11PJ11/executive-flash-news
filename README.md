@@ -165,4 +165,6 @@ npm run install
 
 ## 📄 License
 
-MIT License - See LICENSE file for details
+MIT License - See LICENSE file for details## CI/CD Pipeline Test
+
+This commit tests the trunk-based CI/CD pipeline execution.

@@ -1,8 +1,36 @@
 # Acceptance Test Scenarios
 
 ## Current Active Scenario
-### Scenario: Basic Welcome Widget Displays Successfully on Dashboard
+### Scenario: Executive Authentication and Authorization for Portfolio Access
 - **Status**: Active (One E2E test enabled)
+- **Business Value**: Ensures only authorized executives can access sensitive portfolio data, protecting confidential business information while maintaining seamless user experience
+- **Architecture Integration**: Tests Forge authentication integration, role-based access control, and secure data filtering throughout hexagonal architecture layers
+- **Step Method Requirements**: Production services for user authentication, authorization validation, and secure portfolio data access
+
+#### Given-When-Then Structure
+```gherkin
+Given an executive user with valid Forge authentication credentials
+  And the executive has "Portfolio View" permissions for their business unit
+  And the Executive Flash News plugin is installed and activated
+When the executive authenticates through Forge platform
+  And navigates to their Jira dashboard
+  And accesses the Executive Flash News widget
+Then the system should authenticate the executive successfully
+  And authorize access to their portfolio data based on their permissions
+  And display only the portfolio projects they are authorized to view
+  And protect sensitive data from unauthorized access
+  And log the executive data access for audit purposes
+```
+
+#### Step Implementation Guidelines
+- Step methods MUST call production AuthenticationService via dependency injection
+- Step methods MUST call production AuthorizationService for role-based access control
+- Use appropriate security patterns for user identity validation and data filtering
+- Focus on business security outcomes: "executive accesses authorized data", "sensitive data protected"
+- Validate business security behaviors: authentication success, authorized data access, audit logging
+
+### Previous Scenario: Basic Welcome Widget Displays Successfully on Dashboard
+- **Status**: [Ignore("Temporarily disabled - will enable after authentication security is established")]
 - **Business Value**: Establishes core plugin presence and validates technical foundation for future enhancements
 - **Architecture Integration**: Tests Jira dashboard integration, plugin lifecycle, and basic widget rendering infrastructure
 
